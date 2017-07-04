@@ -247,8 +247,27 @@ private:
         for(size_t pos_rank = 1; pos_rank < rank_chunk; pos_rank++ ){
           size_raw_data *= chunk_dims_out[pos_rank];
         }
+
+        unsigned short * dset_data = new unsigned short[size_raw_data];
         size_raw_data *= t_size;
         std::cout << " size_raw_data " << size_raw_data << std::endl;
+
+        herr_t      status;
+
+        /*
+         * Create a datatype to refer to.
+         */
+         hid_t		type_id;       /* Datatype ID	   	 */
+         hid_t		size1;       /* Datatype ID	   	 */
+
+      type_id = H5Tvlen_create (H5T_NATIVE_USHORT);
+      size1 = H5Dget_storage_size(did);
+      std::vector<char> buf(static_cast<int>(size1), 0x00); //Allocate and Zero the array
+      type_id = H5Dget_type(did);
+      status = H5Dread(did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &(buf.front()) );
+      std::cout << " buf.size " << buf.size() << std::endl;
+
+
 
         /*
          * The datatype and dataspace can be used to read all or
