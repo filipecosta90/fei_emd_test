@@ -13,6 +13,8 @@ set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../.."
   "/usr/local/Cellar/hdf5/1.10.1/include"
   "/usr/local/opt/szip/include"
+  "/usr/local/include"
+  "/usr/local/include/opencv"
   )
 
 # Targets to which this target links.

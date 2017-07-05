@@ -6,6 +6,45 @@
 #include <list>
 #include <string>
 #include <map>
+#include <sstream>
+#include <map>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
+
+#include <opencv2/opencv.hpp>           //
+#include <opencv2/core/hal/interface.h>  // for CV_32FC1, CV_8UC1, CV_32F
+#include <opencv2/core/types_c.h>        // for CvScalar, cvScalar, CvPoint
+#include <opencv2/imgproc/imgproc_c.h>   // for CV_AA
+#include <opencv2/imgproc/types_c.h>     // for ::CV_TM_CCOEFF_NORMED
+#include <opencv2/core.hpp>              // for minMaxLoc, Exception, Hershe...
+#include <opencv2/core/base.hpp>         // for Code::StsNoConv, NormTypes::...
+#include <opencv2/core/cvstd.inl.hpp>    // for operator<<, String::String
+#include <opencv2/highgui.hpp>           // for imshow, namedWindow, waitKey
+#include <opencv2/imgcodecs.hpp>         // for imwrite
+#include <opencv2/imgproc.hpp>           // for putText, resize, Interpolati...
+#include <opencv2/core/mat.hpp>        // for Mat
+#include <opencv2/core/mat.inl.hpp>    // for Mat::~Mat
+#include <opencv2/core/types.hpp>      // for Point, Point3d, Point2f, Rect
+#include <opencv2/video/tracking.hpp>  // for ::MOTION_EUCLIDEAN
+
+#include <opencv2/core/hal/interface.h>  // for CV_8UC1, CV_32F, CV_32FC1
+#include <opencv2/imgproc/imgproc_c.h>   // for cvGetSpatialMoment
+#include <opencv2/imgproc/types_c.h>     // for ::CV_THRESH_BINARY, CvMoments
+#include <opencv2/core.hpp>              // for minMaxLoc, normalize, Exception
+#include <opencv2/core/base.hpp>         // for NormTypes::NORM_MINMAX, Code...
+#include <opencv2/core/cvstd.hpp>        // for Ptr
+#include <opencv2/core/cvstd.inl.hpp>    // for operator<<, String::String
+#include <opencv2/core/ptr.inl.hpp>      // for Ptr::operator->, Ptr::Ptr<T>
+#include <opencv2/core/version.hpp>      // for CV_MAJOR_VERSION
+#include <opencv2/features2d.hpp>        // for SimpleBlobDetector::Params
+#include <opencv2/imgcodecs.hpp>         // for imwrite
+#include <opencv2/imgproc.hpp>           // for Canny, boundingRect, drawCon...
+#include <opencv2/video/tracking.hpp>    // for findTransformECC, ::MOTION_E...
+#include <opencv2/core/mat.hpp>      // for Mat
+#include <opencv2/core/mat.inl.hpp>  // for Mat::~Mat
+#include <opencv2/core/matx.hpp>     // for Vec4d
+#include <opencv2/core/types.hpp>    // for Point3d, Point, Rect, Point2d
 
 #include "H5Cpp.h"
 #include "hdf5.h"
@@ -168,13 +207,16 @@ private:
 
   size_t size_raw_data;
 
-  std::vector<char> raw_data;
+  std::vector<unsigned char> raw_data;
 
   public:
     EMDDataSet(   hid_t id ){
       dsid = id;
     }
-    std::vector<char> get_raw_data(){ return raw_data; }
+    std::vector<unsigned char> get_raw_data(){ return raw_data; }
+    hsize_t* get_chunk_dims_out(){
+      return chunk_dims_out;
+    }
 
     /*
      *  Run through all the attributes of a dataset or group.
@@ -250,10 +292,6 @@ private:
         for(size_t pos_rank = 1; pos_rank < rank_chunk; pos_rank++ ){
           size_raw_data *= chunk_dims_out[pos_rank];
         }
-
-        unsigned short * dset_data = new unsigned short[size_raw_data];
-        size_raw_data *= t_size;
-        std::cout << " size_raw_data " << size_raw_data << std::endl;
 
         herr_t      status;
         /*
@@ -612,6 +650,8 @@ EMDDataSet* get_dataset( std::string dataset_name ){
 };
 
 const H5std_string FILE_NAME( "../STEM_2016-12-07_14h43m22s.emd" );
+//const H5std_string FILE_NAME( "../fei_emd_image.emd" );
+
 const H5std_string DATASET_NAME( "Data" );
 
 int main(int argc, char **argv){
@@ -632,14 +672,57 @@ int main(int argc, char **argv){
       bool flag = true;
       flag &= grp.get_flag_contains_group("/Data");
       std::cout << std::boolalpha << "grp.get_flag_contains_group(/Data)" << grp.get_flag_contains_group("/Data") << std::endl;
-
       EMDGroup* grp_1 = grp.get_group("/Data");
       EMDGroup* grp_2 = grp_1->get_group("/Data/Image");
       EMDGroup* grp_3 = grp_2->get_child_group(0);
       EMDDataSet* ds_grp_3 = grp_3->get_dataset(grp_3->get_name()+"/Data");
-      std::vector<char> data_ds_grp_3 = ds_grp_3->get_raw_data();
-      std::vector<unsigned short>     b(data_ds_grp_3.begin(),data_ds_grp_3.end());
-      std::cout << "### b.size() " << b.size() << std::endl;
+      std::vector<unsigned char> data_ds_grp_3 = ds_grp_3->get_raw_data();
+      std::vector<unsigned short>    b(data_ds_grp_3.size()/2);
+      memcpy(&b[0], &data_ds_grp_3[0], data_ds_grp_3.size());
+
+      EMDDataSet* ds_grp_3_meta = grp_3->get_dataset(grp_3->get_name()+"/Metadata");
+      std::vector<unsigned char> metadata_ds_grp_3 = ds_grp_3_meta->get_raw_data();
+      std::vector<char>    meta(metadata_ds_grp_3.size()/2);
+      memcpy(&meta[0], &metadata_ds_grp_3[0], metadata_ds_grp_3.size());
+
+// Read json.
+  boost::property_tree::ptree pt2;
+  std::stringstream metadata_string (std::string(meta.begin(), meta.end()));
+  metadata_string << "\n";
+  std::cout << "'" << metadata_string.str() << "'";
+
+  try{
+          boost::property_tree::read_json(metadata_string, pt2);
+          //std::string foo = pt2.get<std::string> ("BinaryResult.PixelSize.width");
+          //std::cout << "BinaryResult.PixelSize.width" << foo << std::endl;
+
+      }
+      catch (std::exception const& e)
+      {
+          std::cerr << " ERROR: " << e.what() << std::endl;
+      }
+
+
+
+hsize_t* dims = ds_grp_3->get_chunk_dims_out();
+
+std::cout << dims[0] << std::endl;
+std::cout << dims[1] << std::endl;
+std::cout << dims[2] << std::endl;
+
+    //  std::cout << "### b.size() " << b.size() << "pos5 << " << (unsigned short) b.at(5) << "\t" << b.at(10) << "\t" << b.at(1024*1024-1)<<  std::endl;
+
+int n_rows = dims[0];
+int n_cols = dims[1];
+      cv::Mat raw_simulated_image ( n_rows , n_cols , CV_16UC1);
+            int pos = 0;
+            for (int row = 0; row < n_rows; row++) {
+              for (int col = 0; col < n_cols; col++) {
+                raw_simulated_image.at<unsigned short>(row, col) = b.at(row * n_rows + col ) ;
+                pos++;
+              }
+            }
+          imwrite("test.png",raw_simulated_image);
 
     } catch(const H5::FileIException&) {
     }

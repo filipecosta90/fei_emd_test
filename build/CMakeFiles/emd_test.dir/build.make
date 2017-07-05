@@ -96,6 +96,33 @@ emd_test: /usr/local/opt/szip/lib/libsz.dylib
 emd_test: /usr/lib/libz.dylib
 emd_test: /usr/lib/libdl.dylib
 emd_test: /usr/lib/libm.dylib
+emd_test: /usr/local/lib/libboost_log-mt.dylib
+emd_test: /usr/local/lib/libboost_log_setup-mt.dylib
+emd_test: /usr/local/lib/libboost_system-mt.dylib
+emd_test: /usr/local/lib/libboost_program_options-mt.dylib
+emd_test: /usr/local/lib/libboost_filesystem-mt.dylib
+emd_test: /usr/local/lib/libboost_thread-mt.dylib
+emd_test: /usr/local/lib/libboost_iostreams-mt.dylib
+emd_test: /usr/local/lib/libboost_date_time-mt.dylib
+emd_test: /usr/local/lib/libboost_regex-mt.dylib
+emd_test: /usr/local/lib/libboost_chrono-mt.dylib
+emd_test: /usr/local/lib/libboost_atomic-mt.dylib
+emd_test: /usr/local/lib/libopencv_shape.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_stitching.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_superres.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_videostab.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_objdetect.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_calib3d.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_features2d.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_flann.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_highgui.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_ml.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_photo.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_video.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_videoio.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_imgcodecs.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_imgproc.3.1.0.dylib
+emd_test: /usr/local/lib/libopencv_core.3.1.0.dylib
 emd_test: CMakeFiles/emd_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/filipeoliveira/Documents/fei_emd_test/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable emd_test"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/emd_test.dir/link.txt --verbose=$(VERBOSE)
