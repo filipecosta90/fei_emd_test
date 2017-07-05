@@ -5,6 +5,7 @@
 #include <cmath>
 #include <list>
 #include <string>
+#include <map>
 
 #include "H5Cpp.h"
 #include "hdf5.h"
@@ -39,12 +40,14 @@ class EMDObject {
     // Integer data can be signed two's complement (H5T_SGN_2) or unsigned (H5T_SGN_NONE)
     H5T_sign_t int_sign;
 
+
   public:
+
+    std::string get_name(){ return name; }
     /*
      *  Analyze a data type description
      */
-    void
-      do_dtype(hid_t tid) {
+    void do_dtype(hid_t tid) {
         t_class = H5Tget_class(tid);
         t_size = H5Tget_size(tid);
         printf(" Datatype size %d.\n", t_size);
@@ -163,13 +166,15 @@ private:
   int  rank_chunk;
   int nfilters;
 
-  char* raw_data;
   size_t size_raw_data;
+
+  std::vector<char> raw_data;
 
   public:
     EMDDataSet(   hid_t id ){
       dsid = id;
     }
+    std::vector<char> get_raw_data(){ return raw_data; }
 
     /*
      *  Run through all the attributes of a dataset or group.
@@ -206,8 +211,6 @@ private:
         hid_t space_id;
         hsize_t size;
         char ds_name[MAX_NAME];
-
-
         /*
          * Information about the group:
          *  Name and attributes
@@ -253,7 +256,6 @@ private:
         std::cout << " size_raw_data " << size_raw_data << std::endl;
 
         herr_t      status;
-
         /*
          * Create a datatype to refer to.
          */
@@ -262,12 +264,14 @@ private:
 
       type_id = H5Tvlen_create (H5T_NATIVE_USHORT);
       size1 = H5Dget_storage_size(did);
-      std::vector<char> buf(static_cast<int>(size1), 0x00); //Allocate and Zero the array
+      raw_data.resize(static_cast<int>(size1), 0x00); //Allocate and Zero the array
       type_id = H5Dget_type(did);
-      status = H5Dread(did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &(buf.front()) );
-      std::cout << " buf.size " << buf.size() << std::endl;
+      status = H5Dread(did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &(raw_data.front()) );
+      std::cout << " buf.size " << raw_data.size() << std::endl;
 
-
+/*      std::vector<unsigned short>     b(raw_data.begin(),raw_data.end());
+   // Print out the vector
+   std::copy(b.begin(),b.end(),std::ostream_iterator<unsigned short>(std::cout,"\t"));*/
 
         /*
          * The datatype and dataspace can be used to read all or
@@ -369,40 +373,40 @@ private:
            *    - value to fill, if any
            */
 
-          printf("ALLOC_TIME ");
+          //printf("ALLOC_TIME");
           H5Pget_alloc_time(pid, &at);
 
           switch (at)
           {
             case H5D_ALLOC_TIME_EARLY:
-              printf("EARLY\n");
+              //printf("EARLY\n");
               break;
             case H5D_ALLOC_TIME_INCR:
-              printf("INCR\n");
+              //printf("INCR\n");
               break;
             case H5D_ALLOC_TIME_LATE:
-              printf("LATE\n");
+              //printf("LATE\n");
               break;
             default:
-              printf("unknown allocation policy");
+              //printf("unknown allocation policy");
               break;
           }
 
-          printf("FILL_TIME: ");
+          //printf("FILL_TIME: ");
           H5Pget_fill_time(pid, &ft);
           switch ( ft )
           {
             case H5D_FILL_TIME_ALLOC:
-              printf("ALLOC\n");
+              //printf("ALLOC\n");
               break;
             case H5D_FILL_TIME_NEVER:
-              printf("NEVER\n");
+              //printf("NEVER\n");
               break;
             case H5D_FILL_TIME_IFSET:
-              printf("IFSET\n");
+              ////printf("IFSET\n");
               break;
             default:
-              printf("?\n");
+              //printf("?\n");
               break;
           }
 
@@ -410,7 +414,7 @@ private:
 
           if (fvstatus == H5D_FILL_VALUE_UNDEFINED)
           {
-            printf("No fill value defined, will use default\n");
+            //printf("No fill value defined, will use default\n");
           } else {
             /* Read  the fill value with H5Pget_fill_value.
              * Fill value is the same data type as the dataset.
@@ -429,13 +433,64 @@ class EMDGroup : public EMDObject {
     char group_name[MAX_NAME];
     char memb_name[MAX_NAME];
     std::vector<EMDGroup*> _groups;
+    std::map<std::string,EMDGroup*> _map_groups;
     std::vector<EMDDataSet*> _datasets;
+    std::map<std::string,EMDDataSet*> _map_datasets;
     std::vector<EMDAttribute*> _attributes;
 
   public:
     EMDGroup( hid_t id ){
       gid = id;
     }
+
+    bool get_flag_contains_group( std::string name ){
+      bool result = false;
+        std::map<std::string,EMDGroup*>::iterator it;
+        it = _map_groups.find( name );
+        if (it != _map_groups.end()){
+          result = true;
+        }
+        return result;
+    }
+
+    EMDGroup* get_group( std::string name ){
+      EMDGroup* ret_group;
+        std::map<std::string,EMDGroup*>::iterator it;
+        it = _map_groups.find( name );
+        if (it != _map_groups.end()){
+          ret_group = it->second;
+        }
+        return ret_group;
+    }
+
+    EMDGroup* get_child_group( int child_pos  ){
+      EMDGroup* ret_group;
+      if(_groups.size() > child_pos ){
+        ret_group = _groups.at(child_pos);
+        }
+        return ret_group;
+    }
+
+
+bool get_flag_contains_dataset( std::string dataset_name ){
+  bool result = false;
+    std::map<std::string,EMDDataSet*>::iterator it;
+    it = _map_datasets.find( dataset_name );
+    if (it != _map_datasets.end()){
+      result = true;
+    }
+    return result;
+}
+
+EMDDataSet* get_dataset( std::string dataset_name ){
+  EMDDataSet* ret_dataset;
+    std::map<std::string,EMDDataSet*>::iterator it;
+    it = _map_datasets.find( dataset_name );
+    if (it != _map_datasets.end()){
+      ret_dataset = it->second ;
+    }
+    return ret_dataset;
+  }
 
     /*
      *  Run through all the attributes of a dataset or group.
@@ -514,6 +569,10 @@ class EMDGroup : public EMDObject {
               grpid = H5Gopen(gid,memb_name, H5P_DEFAULT);
               EMDGroup* new_group = new EMDGroup( grpid );
               new_group->scan_group( grpid );
+              std::string g_name = new_group->get_name();
+              std::cout << " GROUP name'" << g_name <<"'"<< std::endl;
+              std::map<std::string,EMDGroup*>::iterator it = _map_groups.begin();
+              _map_groups.insert(it, std::pair<std::string,EMDGroup*>(g_name,new_group));  // max efficiency inserting
               _groups.push_back( new_group );
               H5Gclose(grpid);
               break;
@@ -524,8 +583,12 @@ class EMDGroup : public EMDObject {
               dsid = H5Dopen(gid,memb_name, H5P_DEFAULT);
               EMDDataSet* new_dataset = new EMDDataSet( dsid );
               new_dataset->do_dset( dsid );
+              std::string dataset_name = new_dataset->get_name();
+              std::cout << " DATASET name'" << dataset_name <<"'"<< std::endl;
+
+              std::map<std::string,EMDDataSet*>::iterator it = _map_datasets.begin();
+              _map_datasets.insert(it, std::pair<std::string,EMDDataSet*>(dataset_name,new_dataset));  // max efficiency inserting
               _datasets.push_back( new_dataset );
-              //do_dset(dsid);
               H5Dclose(dsid);
               break;
             }
@@ -566,6 +629,18 @@ int main(int argc, char **argv){
       EMDGroup grp(grp_id);
       grp.scan_group( grp_id );
       status = H5Fclose(file->getId());
+      bool flag = true;
+      flag &= grp.get_flag_contains_group("/Data");
+      std::cout << std::boolalpha << "grp.get_flag_contains_group(/Data)" << grp.get_flag_contains_group("/Data") << std::endl;
+
+      EMDGroup* grp_1 = grp.get_group("/Data");
+      EMDGroup* grp_2 = grp_1->get_group("/Data/Image");
+      EMDGroup* grp_3 = grp_2->get_child_group(0);
+      EMDDataSet* ds_grp_3 = grp_3->get_dataset(grp_3->get_name()+"/Data");
+      std::vector<char> data_ds_grp_3 = ds_grp_3->get_raw_data();
+      std::vector<unsigned short>     b(data_ds_grp_3.begin(),data_ds_grp_3.end());
+      std::cout << "### b.size() " << b.size() << std::endl;
+
     } catch(const H5::FileIException&) {
     }
   }

@@ -17,6 +17,8 @@ list
 -
 string
 -
+map
+-
 H5Cpp.h
 /Users/filipeoliveira/Documents/fei_emd_test/H5Cpp.h
 hdf5.h
